@@ -15,18 +15,6 @@
  */
 package org.apache.ibatis.session;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.function.BiFunction;
-
 import org.apache.ibatis.binding.MapperRegistry;
 import org.apache.ibatis.builder.CacheRefResolver;
 import org.apache.ibatis.builder.IncompleteElementException;
@@ -42,11 +30,7 @@ import org.apache.ibatis.cache.impl.PerpetualCache;
 import org.apache.ibatis.datasource.jndi.JndiDataSourceFactory;
 import org.apache.ibatis.datasource.pooled.PooledDataSourceFactory;
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSourceFactory;
-import org.apache.ibatis.executor.BatchExecutor;
-import org.apache.ibatis.executor.CachingExecutor;
-import org.apache.ibatis.executor.Executor;
-import org.apache.ibatis.executor.ReuseExecutor;
-import org.apache.ibatis.executor.SimpleExecutor;
+import org.apache.ibatis.executor.*;
 import org.apache.ibatis.executor.keygen.KeyGenerator;
 import org.apache.ibatis.executor.loader.ProxyFactory;
 import org.apache.ibatis.executor.loader.cglib.CglibProxyFactory;
@@ -66,13 +50,7 @@ import org.apache.ibatis.logging.log4j2.Log4j2Impl;
 import org.apache.ibatis.logging.nologging.NoLoggingImpl;
 import org.apache.ibatis.logging.slf4j.Slf4jImpl;
 import org.apache.ibatis.logging.stdout.StdOutImpl;
-import org.apache.ibatis.mapping.BoundSql;
-import org.apache.ibatis.mapping.Environment;
-import org.apache.ibatis.mapping.MappedStatement;
-import org.apache.ibatis.mapping.ParameterMap;
-import org.apache.ibatis.mapping.ResultMap;
-import org.apache.ibatis.mapping.ResultSetType;
-import org.apache.ibatis.mapping.VendorDatabaseIdProvider;
+import org.apache.ibatis.mapping.*;
 import org.apache.ibatis.parsing.XNode;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.plugin.InterceptorChain;
@@ -95,28 +73,82 @@ import org.apache.ibatis.type.TypeAliasRegistry;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
+import java.util.*;
+import java.util.function.BiFunction;
+
 /**
  * @author Clinton Begin
  */
 public class Configuration {
 
+  /**
+   * 环境对象
+   */
   protected Environment environment;
 
+  /**
+   * 是否启动分页的安全检查
+   * 主要是startIndex和size的检查
+   */
   protected boolean safeRowBoundsEnabled;
+  /**
+   * 是否启动结果处理器的安全检查
+   */
   protected boolean safeResultHandlerEnabled = true;
+  /**
+   * 是否开启下划线转驼峰
+   */
   protected boolean mapUnderscoreToCamelCase;
+  /**
+   * 控制具有懒加载特性的对象的属性的加载, 配合懒加载开关使用
+   * true   表示如果对具有懒加载特性的对象的任意调用会导致这个对象的完整加载
+   * false  表示每种属性按照需要加载
+   */
   protected boolean aggressiveLazyLoading;
+  /**
+   * 是否支持多结果集
+   */
   protected boolean multipleResultSetsEnabled = true;
+  /**
+   * 是否使用主键生成
+   */
   protected boolean useGeneratedKeys;
+  /**
+   * 是否使用列标签
+   */
   protected boolean useColumnLabel = true;
+  /**
+   * 是否开启二级缓存,  ps:一级缓存session级别,默认有,而且关不掉
+   */
   protected boolean cacheEnabled = true;
+  /**
+   * 是否对null值进行值设置
+   */
   protected boolean callSettersOnNulls;
+  /**
+   * 是否使用参数的实际名称作为查询参数
+   */
   protected boolean useActualParamName = true;
+  /**
+   * 查询结果为空时,是否返回空对象
+   */
   protected boolean returnInstanceForEmptyRow;
+  /**
+   * 是否跳过sql语句中的空格
+   */
   protected boolean shrinkWhitespacesInSql;
 
+  /**
+   * 日志前缀
+   */
   protected String logPrefix;
+  /**
+   * LOG实现类
+   */
   protected Class<? extends Log> logImpl;
+  /**
+   * 虚拟文件系统实现类
+   */
   protected Class<? extends VFS> vfsImpl;
   protected Class<?> defaultSqlProviderType;
   protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;

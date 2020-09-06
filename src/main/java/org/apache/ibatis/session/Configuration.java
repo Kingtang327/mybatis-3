@@ -150,87 +150,221 @@ public class Configuration {
    * 虚拟文件系统实现类
    */
   protected Class<? extends VFS> vfsImpl;
+  /**
+   * //todo
+   */
   protected Class<?> defaultSqlProviderType;
+  /**
+   * 本地缓存级别, SESSION,STATEMENT
+   */
   protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;
+  /**
+   * 处理null类型的jdbcType
+   */
   protected JdbcType jdbcTypeForNull = JdbcType.OTHER;
+  /**
+   * 触发懒加载的方法集合
+   */
   protected Set<String> lazyLoadTriggerMethods = new HashSet<>(Arrays.asList("equals", "clone", "hashCode", "toString"));
+  /**
+   * 查询语句的默认超时时间
+   */
   protected Integer defaultStatementTimeout;
+  /**
+   * 默认查询的size
+   */
   protected Integer defaultFetchSize;
+  /**
+   * 默认的结果集类型
+   */
   protected ResultSetType defaultResultSetType;
+  /**
+   * 默认的sql执行器类型 Simple
+   */
   protected ExecutorType defaultExecutorType = ExecutorType.SIMPLE;
+  /**
+   * 自动匹配的行为 ,部分匹配, 不匹配resultmap的嵌套
+   */
   protected AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL;
+  /**
+   * 自动处理未知列的方式, NONE 不处理
+   */
   protected AutoMappingUnknownColumnBehavior autoMappingUnknownColumnBehavior = AutoMappingUnknownColumnBehavior.NONE;
 
+  /**
+   * 内部维护的配置对象, 用于保存xml中读取的属性键值对
+   */
   protected Properties variables = new Properties();
+  /**
+   * 反射工厂
+   */
   protected ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+  /**
+   * 对象工厂
+   */
   protected ObjectFactory objectFactory = new DefaultObjectFactory();
+  /**
+   * 对象包装工厂
+   */
   protected ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
 
+  /**
+   * 是否开启懒加载
+   */
   protected boolean lazyLoadingEnabled = false;
+  /**
+   * 代理工厂
+   */
   protected ProxyFactory proxyFactory = new JavassistProxyFactory(); // #224 Using internal Javassist instead of OGNL
 
-  protected String databaseId;
   /**
+   * 数据库厂商id
+   */
+  protected String databaseId;
+  /**配置工厂类
    * Configuration factory class.
+   * 用于创建加载反序列化的不可读的属性的Configuration对象
    * Used to create Configuration for loading deserialized unread properties.
    *
    * @see <a href='https://code.google.com/p/mybatis/issues/detail?id=300'>Issue 300 (google code)</a>
    */
   protected Class<?> configurationFactory;
 
+  /**
+   * Mapper注册器,内部维护了Mapper类和Mapper代理工厂的HashMap
+   */
   protected final MapperRegistry mapperRegistry = new MapperRegistry(this);
+  /**
+   * 拦截器链, 内部维护了一个拦截器列表
+   */
   protected final InterceptorChain interceptorChain = new InterceptorChain();
+  /**
+   * 类型处理器的注册器, 维护jdbcType和对应的处理器的关系
+   */
   protected final TypeHandlerRegistry typeHandlerRegistry = new TypeHandlerRegistry(this);
+  /**
+   * 类别名注册器, 维护类和类别名的关系
+   */
   protected final TypeAliasRegistry typeAliasRegistry = new TypeAliasRegistry();
+  /**
+   * 语言注册器, 维护语言驱动类和语言驱动对象的关系
+   */
   protected final LanguageDriverRegistry languageRegistry = new LanguageDriverRegistry();
 
+  /**
+   * 维护MapperStatement对象 id和对象本身的map
+   * 一个MappedStatement 对应的就是mapper文件中的一个CRUD的语句
+   */
   protected final Map<String, MappedStatement> mappedStatements = new StrictMap<MappedStatement>("Mapped Statements collection")
       .conflictMessageProducer((savedValue, targetValue) ->
           ". please check " + savedValue.getResource() + " and " + targetValue.getResource());
+  /**
+   * 维护Cache对象 id和对象本身的map
+   * 如果在mapper.xml中开启缓存, 会以namespace为id创建一个二级缓存cache对象
+   */
   protected final Map<String, Cache> caches = new StrictMap<>("Caches collection");
+  /**
+   * 维护resultmap对象 id和对象本身的map
+   * ResultMap对象就是mapper.xml中定义的<resultmap></resultmap>
+   */
   protected final Map<String, ResultMap> resultMaps = new StrictMap<>("Result Maps collection");
+  /**
+   * 维护ParameterMap对象 id和对象本身的map
+   * ParameterMap就是mapper.xml中定义的<parameterMap></parameterMap>
+   * 一般不用
+   */
   protected final Map<String, ParameterMap> parameterMaps = new StrictMap<>("Parameter Maps collection");
+  /**
+   * 维护KeyGenerator对象 id和对象本身的map
+   * KeyGenerator是定义在 <selectKey></selectKey>
+   */
   protected final Map<String, KeyGenerator> keyGenerators = new StrictMap<>("Key Generators collection");
 
+  /**
+   * 维护已加载的资源名称
+   * 就是mapper.xml的名称或者是mapper.class的类名
+   */
   protected final Set<String> loadedResources = new HashSet<>();
+  /**
+   * 维护sql代码段和sql节点id
+   * <sql></sql>
+   */
   protected final Map<String, XNode> sqlFragments = new StrictMap<>("XML fragments parsed from previous mappers");
 
+  /**
+   * 未完成处理的XMLStatement集合
+   * 解析出错的XMLStatement会放入其中
+   * 此处使用LinkedList的原因应是因为会涉及到移除元素操作,使用链表效率高
+   */
   protected final Collection<XMLStatementBuilder> incompleteStatements = new LinkedList<>();
+  /**
+   * 未完成处理的缓存引用集合
+   * 解析<cache-ref></cache-ref>标签出错时会放入其中
+   * 或者是CacheNamespaceRef注解
+   * 此处使用LinkedList的原因应是因为会涉及到移除元素操作,使用链表效率高
+   */
   protected final Collection<CacheRefResolver> incompleteCacheRefs = new LinkedList<>();
+  /**
+   * 未完成处理的ResultMap集合
+   * 此处使用LinkedList的原因应是因为会涉及到移除元素操作,使用链表效率高
+   */
   protected final Collection<ResultMapResolver> incompleteResultMaps = new LinkedList<>();
+  /**
+   * 未完成处理的方法集合
+   * 为Mapper.class中定义的方法
+   * 此处使用LinkedList的原因应是因为会涉及到移除元素操作,使用链表效率高
+   */
   protected final Collection<MethodResolver> incompleteMethods = new LinkedList<>();
 
-  /*
+  /**
+   * 二级缓存的引用  namespace ==> referencedNamespace
    * A map holds cache-ref relationship. The key is the namespace that
    * references a cache bound to another namespace and the value is the
    * namespace which the actual cache is bound to.
    */
   protected final Map<String, String> cacheRefMap = new HashMap<>();
 
+  /**
+   * 构造函数
+   * @param environment       环境对象
+   */
   public Configuration(Environment environment) {
+    //调用无参构造函数,初始化各种注册器
     this();
     this.environment = environment;
   }
 
+  /**
+   * 无参构造函数
+   */
   public Configuration() {
+
+    //初始化类别名注册器
+
+    //事务工厂类别名注册
     typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
     typeAliasRegistry.registerAlias("MANAGED", ManagedTransactionFactory.class);
 
+    //数据源类别名注册
     typeAliasRegistry.registerAlias("JNDI", JndiDataSourceFactory.class);
     typeAliasRegistry.registerAlias("POOLED", PooledDataSourceFactory.class);
     typeAliasRegistry.registerAlias("UNPOOLED", UnpooledDataSourceFactory.class);
 
+    //缓存类别名注册
     typeAliasRegistry.registerAlias("PERPETUAL", PerpetualCache.class);
     typeAliasRegistry.registerAlias("FIFO", FifoCache.class);
     typeAliasRegistry.registerAlias("LRU", LruCache.class);
     typeAliasRegistry.registerAlias("SOFT", SoftCache.class);
     typeAliasRegistry.registerAlias("WEAK", WeakCache.class);
 
+    //数据库厂商类别名注册
     typeAliasRegistry.registerAlias("DB_VENDOR", VendorDatabaseIdProvider.class);
 
+    //语言处理类别名注册
     typeAliasRegistry.registerAlias("XML", XMLLanguageDriver.class);
     typeAliasRegistry.registerAlias("RAW", RawLanguageDriver.class);
 
+    //日志实现类别名注册
     typeAliasRegistry.registerAlias("SLF4J", Slf4jImpl.class);
     typeAliasRegistry.registerAlias("COMMONS_LOGGING", JakartaCommonsLoggingImpl.class);
     typeAliasRegistry.registerAlias("LOG4J", Log4jImpl.class);
@@ -239,9 +373,11 @@ public class Configuration {
     typeAliasRegistry.registerAlias("STDOUT_LOGGING", StdOutImpl.class);
     typeAliasRegistry.registerAlias("NO_LOGGING", NoLoggingImpl.class);
 
+    //代理工厂类别名注册
     typeAliasRegistry.registerAlias("CGLIB", CglibProxyFactory.class);
     typeAliasRegistry.registerAlias("JAVASSIST", JavassistProxyFactory.class);
 
+    //语言注册器初始化
     languageRegistry.setDefaultDriverClass(XMLLanguageDriver.class);
     languageRegistry.register(RawLanguageDriver.class);
   }
@@ -669,47 +805,98 @@ public class Configuration {
     return getDefaultScriptingLanguageInstance();
   }
 
+  /**通过一个给定的对象构建一个MetaObject
+   * @param object            给定的对象
+   * @return                  包含对象各种信息的元对象, 包括属性,getter/setter方法等
+   */
   public MetaObject newMetaObject(Object object) {
     return MetaObject.forObject(object, objectFactory, objectWrapperFactory, reflectorFactory);
   }
 
+  /**构建一个参数处理器对象       mybatis对外提供的Interceptor接口,允许对ParameterHandler的方法就行拦截处理
+   * @param mappedStatement   mappedStatement
+   * @param parameterObject   参数对象
+   * @param boundSql          boundSql
+   * @return                  参数处理器对象ParameterHandler
+   */
   public ParameterHandler newParameterHandler(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql) {
+    //根据语言驱动构建一个参数处理器
     ParameterHandler parameterHandler = mappedStatement.getLang().createParameterHandler(mappedStatement, parameterObject, boundSql);
+    //将参数处理器注册到每个Interceptor中
     parameterHandler = (ParameterHandler) interceptorChain.pluginAll(parameterHandler);
     return parameterHandler;
   }
 
+  /**构建一个结果集处理器         mybatis对外提供的Interceptor接口,允许对ResultSetHandler的方法就行拦截处理
+   * @param executor          sql执行器
+   * @param mappedStatement   mappedStatement
+   * @param rowBounds         mybatis自带的分页对象
+   * @param parameterHandler  参数处理器
+   * @param resultHandler     结果处理器
+   * @param boundSql          boundSql
+   * @return                  结果集处理器
+   */
   public ResultSetHandler newResultSetHandler(Executor executor, MappedStatement mappedStatement, RowBounds rowBounds, ParameterHandler parameterHandler,
       ResultHandler resultHandler, BoundSql boundSql) {
+    //创建一个默认的结果集处理器DefaultResultSetHandler
     ResultSetHandler resultSetHandler = new DefaultResultSetHandler(executor, mappedStatement, parameterHandler, resultHandler, boundSql, rowBounds);
+    //将结果集处理器注册到每个Interceptor中
     resultSetHandler = (ResultSetHandler) interceptorChain.pluginAll(resultSetHandler);
     return resultSetHandler;
   }
 
+  /**构建一个Statement处理器     mybatis对外提供的Interceptor接口,允许对StatementHandler的方法就行拦截处理
+   * @param executor          sql执行器
+   * @param mappedStatement   mappedStatement
+   * @param parameterObject   参数对象
+   * @param rowBounds         mybatis自带的分页对象
+   * @param resultHandler     结果处理器
+   * @param boundSql          boundSql
+   * @return                  Statement处理器
+   */
   public StatementHandler newStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+    //返回一个RoutingStatementHandler,通过StatementType进行后续的路由
     StatementHandler statementHandler = new RoutingStatementHandler(executor, mappedStatement, parameterObject, rowBounds, resultHandler, boundSql);
+    //将StatementHandler注册到每个Interceptor中
     statementHandler = (StatementHandler) interceptorChain.pluginAll(statementHandler);
     return statementHandler;
   }
 
+  /**构建一个sql执行器
+   * @param transaction       事务对象
+   * @return                  sql执行器
+   */
   public Executor newExecutor(Transaction transaction) {
+    //调用内部方法, 返回一个默认处理器类型的sql执行器
     return newExecutor(transaction, defaultExecutorType);
   }
 
+  /**构建一个sql执行器           mybatis对外提供的Executor接口,允许对StatementHandler的方法就行拦截处理
+   * @param transaction       事务对象
+   * @param executorType      执行器类型, SIMPLE, REUSE, BATCH
+   * @return                  sql执行器
+   */
   public Executor newExecutor(Transaction transaction, ExecutorType executorType) {
+    //给定的执行器类型为空时,返回默认的执行器,否则返回给定的执行器类型
     executorType = executorType == null ? defaultExecutorType : executorType;
+    //执行器类型还为null时,返回SIMPLE类型的处理器,否则返回给定的执行器
     executorType = executorType == null ? ExecutorType.SIMPLE : executorType;
     Executor executor;
     if (ExecutorType.BATCH == executorType) {
+      //返回批处理类型的执行器
       executor = new BatchExecutor(this, transaction);
     } else if (ExecutorType.REUSE == executorType) {
+      //返回可重用的执行器
       executor = new ReuseExecutor(this, transaction);
     } else {
+      //返回一个简单类型的执行器
       executor = new SimpleExecutor(this, transaction);
     }
     if (cacheEnabled) {
+      //若开启了二级缓存,使用缓存执行器进行包装
       executor = new CachingExecutor(executor);
     }
+    //将sql执行器注册到每个Interceptor中
     executor = (Executor) interceptorChain.pluginAll(executor);
     return executor;
   }
@@ -896,20 +1083,25 @@ public class Configuration {
     cacheRefMap.put(namespace, referencedNamespace);
   }
 
-  /*
+  /* 处理所有未完成处理的statement节点
    * Parses all the unprocessed statement nodes in the cache. It is recommended
    * to call this method once all the mappers are added as it provides fail-fast
    * statement validation.
    */
   protected void buildAllStatements() {
+    //解析未完成的resultmap
     parsePendingResultMaps();
     if (!incompleteCacheRefs.isEmpty()) {
+      //处理未完成的<cache-ref>和注解
       synchronized (incompleteCacheRefs) {
+        //解析成功之后从未完成集合中移除
         incompleteCacheRefs.removeIf(x -> x.resolveCacheRef() != null);
       }
     }
     if (!incompleteStatements.isEmpty()) {
+      //处理未完成的statement
       synchronized (incompleteStatements) {
+        //解析成功后从未完成集合中移除
         incompleteStatements.removeIf(x -> {
           x.parseStatementNode();
           return true;
@@ -917,7 +1109,9 @@ public class Configuration {
       }
     }
     if (!incompleteMethods.isEmpty()) {
+      //处理未完成的方法
       synchronized (incompleteMethods) {
+        //解析成功后从未完成集合中移除
         incompleteMethods.removeIf(x -> {
           x.resolve();
           return true;
@@ -926,6 +1120,9 @@ public class Configuration {
     }
   }
 
+  /**
+   * 解析所有未完成的resultmap
+   */
   private void parsePendingResultMaps() {
     if (incompleteResultMaps.isEmpty()) {
       return;
@@ -938,7 +1135,9 @@ public class Configuration {
         Iterator<ResultMapResolver> iterator = incompleteResultMaps.iterator();
         while (iterator.hasNext()) {
           try {
+            //遍历处理未完成的resultmap
             iterator.next().resolve();
+            //完成后从集合中移除
             iterator.remove();
             resolved = true;
           } catch (IncompleteElementException e) {
@@ -965,16 +1164,23 @@ public class Configuration {
     return lastPeriod > 0 ? statementId.substring(0, lastPeriod) : null;
   }
 
+  /**检查嵌套层级的resultap的鉴别器
+   * @param rm          ResultMap
+   */
   // Slow but a one time cost. A better solution is welcome.
   protected void checkGloballyForDiscriminatedNestedResultMaps(ResultMap rm) {
+    //如果rm是有嵌套的resultmap
     if (rm.hasNestedResultMaps()) {
+      //遍历所有已处理的resultmap集合
       for (Map.Entry<String, ResultMap> entry : resultMaps.entrySet()) {
         Object value = entry.getValue();
         if (value instanceof ResultMap) {
           ResultMap entryResultMap = (ResultMap) value;
           if (!entryResultMap.hasNestedResultMaps() && entryResultMap.getDiscriminator() != null) {
+            //如果当前resultmap不是层级resultmap并且指定了鉴别器
             Collection<String> discriminatedResultMapNames = entryResultMap.getDiscriminator().getDiscriminatorMap().values();
             if (discriminatedResultMapNames.contains(rm.getId())) {
+              //如果鉴别器的resultmap中包含当前rm, 给当前遍历的resultmap指定为层级resultmap
               entryResultMap.forceNestedResultMaps();
             }
           }
@@ -983,14 +1189,19 @@ public class Configuration {
     }
   }
 
+  /**根据resultmap中的鉴别的嵌套resultmap来设定当前resultmap的是否为嵌套resultmap属性
+   * @param rm            当前resultmap
+   */
   // Slow but a one time cost. A better solution is welcome.
   protected void checkLocallyForDiscriminatedNestedResultMaps(ResultMap rm) {
     if (!rm.hasNestedResultMaps() && rm.getDiscriminator() != null) {
+      //如果当前resultmap不是嵌套的resultmap并且指定了鉴别器
       for (Map.Entry<String, String> entry : rm.getDiscriminator().getDiscriminatorMap().entrySet()) {
         String discriminatedResultMapName = entry.getValue();
         if (hasResultMap(discriminatedResultMapName)) {
           ResultMap discriminatedResultMap = resultMaps.get(discriminatedResultMapName);
           if (discriminatedResultMap.hasNestedResultMaps()) {
+            //如果当期鉴别器的resultmap是嵌套层级的,设置rm的嵌套层级属性为true
             rm.forceNestedResultMaps();
             break;
           }

@@ -51,17 +51,45 @@ public abstract class BaseExecutor implements Executor {
 
   private static final Log log = LogFactory.getLog(BaseExecutor.class);
 
+  /**
+   * 事务
+   */
   protected Transaction transaction;
+  /**
+   * 包装当前对象的Executor
+   */
   protected Executor wrapper;
 
+  /**
+   * 延迟加载的队列
+   */
   protected ConcurrentLinkedQueue<DeferredLoad> deferredLoads;
+  /**
+   * 本地缓存, 一级缓存
+   */
   protected PerpetualCache localCache;
+  /**
+   * 本地输出参数的一级缓存
+   */
   protected PerpetualCache localOutputParameterCache;
+  /**
+   * 核心配置对象
+   */
   protected Configuration configuration;
 
+  /**
+   * //todo
+   */
   protected int queryStack;
+  /**
+   * 是否关闭
+   */
   private boolean closed;
 
+  /**受保护的构造方法
+   * @param configuration       核心配置对象
+   * @param transaction         事务
+   */
   protected BaseExecutor(Configuration configuration, Transaction transaction) {
     this.transaction = transaction;
     this.deferredLoads = new ConcurrentLinkedQueue<>();
@@ -72,6 +100,9 @@ public abstract class BaseExecutor implements Executor {
     this.wrapper = this;
   }
 
+  /**获取事务
+   * @return                    事务
+   */
   @Override
   public Transaction getTransaction() {
     if (closed) {
@@ -80,13 +111,18 @@ public abstract class BaseExecutor implements Executor {
     return transaction;
   }
 
+  /**关闭executor
+   * @param forceRollback       是否强制回滚
+   */
   @Override
   public void close(boolean forceRollback) {
     try {
       try {
+        //根据需要回滚
         rollback(forceRollback);
       } finally {
         if (transaction != null) {
+          //关闭事务
           transaction.close();
         }
       }
@@ -94,6 +130,7 @@ public abstract class BaseExecutor implements Executor {
       // Ignore. There's nothing that can be done at this point.
       log.warn("Unexpected exception on closing transaction.  Cause: " + e);
     } finally {
+      //清除引用
       transaction = null;
       deferredLoads = null;
       localCache = null;
@@ -102,30 +139,51 @@ public abstract class BaseExecutor implements Executor {
     }
   }
 
+  /**是否关闭
+   * @return                    是否关闭
+   */
   @Override
   public boolean isClosed() {
     return closed;
   }
 
+  /**执行更新语句
+   * @param ms              MappedStatement
+   * @param parameter       参数
+   * @return                影响的行数
+   * @throws SQLException   异常
+   */
   @Override
   public int update(MappedStatement ms, Object parameter) throws SQLException {
     ErrorContext.instance().resource(ms.getResource()).activity("executing an update").object(ms.getId());
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
+    //清除本地缓存
     clearLocalCache();
+    //执行doUpdate
     return doUpdate(ms, parameter);
   }
 
+  /**执行批量语句
+   * @return                    批处理结果
+   * @throws SQLException       异常
+   */
   @Override
   public List<BatchResult> flushStatements() throws SQLException {
     return flushStatements(false);
   }
 
+  /**执行批量语句
+   * @param isRollBack          是否回滚
+   * @return                    批处理结果
+   * @throws SQLException       异常
+   */
   public List<BatchResult> flushStatements(boolean isRollBack) throws SQLException {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
+    //调用doFlushStatements
     return doFlushStatements(isRollBack);
   }
 

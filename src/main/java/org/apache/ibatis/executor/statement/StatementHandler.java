@@ -15,41 +15,79 @@
  */
 package org.apache.ibatis.executor.statement;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.List;
-
 import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.executor.parameter.ParameterHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.session.ResultHandler;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
 
 /**
  * @author Clinton Begin
  */
 public interface StatementHandler {
 
+  /**预处理Statement
+   * @param connection            连接对象
+   * @param transactionTimeout    超时时间
+   * @return                      Statement
+   * @throws SQLException         异常
+   */
   Statement prepare(Connection connection, Integer transactionTimeout)
       throws SQLException;
 
+  /**参数化
+   * @param statement             statement
+   * @throws SQLException         异常
+   */
   void parameterize(Statement statement)
       throws SQLException;
 
+  /**批处理
+   * @param statement             statement
+   * @throws SQLException         异常
+   */
   void batch(Statement statement)
       throws SQLException;
 
+  /**更新
+   * @param statement             statement
+   * @return                      影响的行数
+   * @throws SQLException         异常
+   */
   int update(Statement statement)
       throws SQLException;
 
+  /**查询
+   * @param statement             statement
+   * @param resultHandler         结果处理器
+   * @param <E>                   返回对象泛型
+   * @return                      返回对象集合
+   * @throws SQLException         异常
+   */
   <E> List<E> query(Statement statement, ResultHandler resultHandler)
       throws SQLException;
 
+  /**查询游标
+   * @param statement             statement
+   * @param <E>                   返回对象泛型
+   * @return                      返回游标
+   * @throws SQLException         异常
+   */
   <E> Cursor<E> queryCursor(Statement statement)
       throws SQLException;
 
+  /**获取BoundSql对象
+   * @return                      返回BoundSql
+   */
   BoundSql getBoundSql();
 
+  /**获取参数处理器
+   * @return                      参数处理器对象
+   */
   ParameterHandler getParameterHandler();
 
 }

@@ -72,20 +72,59 @@ public class DefaultResultSetHandler implements ResultSetHandler {
 
   private static final Object DEFERRED = new Object();
 
+  /**
+   * sql执行器
+   */
   private final Executor executor;
+  /**
+   * 核心配置对象
+   */
   private final Configuration configuration;
+  /**
+   * mappedStatement
+   */
   private final MappedStatement mappedStatement;
+  /**
+   * 分页参数
+   */
   private final RowBounds rowBounds;
+  /**
+   * 参数处理器
+   */
   private final ParameterHandler parameterHandler;
+  /**
+   * 结果处理器
+   */
   private final ResultHandler<?> resultHandler;
+  /**
+   * boundSql
+   */
   private final BoundSql boundSql;
+  /**
+   * 类型处理器的注册器, 维护jdbcType和对应的处理器的关系
+   */
   private final TypeHandlerRegistry typeHandlerRegistry;
+  /**
+   * 对象工厂
+   */
   private final ObjectFactory objectFactory;
+  /**
+   * 反射工厂
+   */
   private final ReflectorFactory reflectorFactory;
 
   // nested resultmaps
+  /**
+   *
+   */
   private final Map<CacheKey, Object> nestedResultObjects = new HashMap<>();
+  /**
+   *
+   */
   private final Map<String, Object> ancestorObjects = new HashMap<>();
+  /**
+   *
+   */
   private Object previousRowValue;
 
   // multiple resultsets
@@ -117,8 +156,17 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     }
   }
 
+  /**构造函数
+   * @param executor              sql执行器
+   * @param mappedStatement       mappedStatement
+   * @param parameterHandler      参数处理器
+   * @param resultHandler         结果处理器
+   * @param boundSql              boundSql
+   * @param rowBounds             分页对象
+   */
   public DefaultResultSetHandler(Executor executor, MappedStatement mappedStatement, ParameterHandler parameterHandler, ResultHandler<?> resultHandler, BoundSql boundSql,
                                  RowBounds rowBounds) {
+    //给类属性赋值
     this.executor = executor;
     this.configuration = mappedStatement.getConfiguration();
     this.mappedStatement = mappedStatement;
@@ -135,45 +183,77 @@ public class DefaultResultSetHandler implements ResultSetHandler {
   // HANDLE OUTPUT PARAMETER
   //
 
+  /**处理输出参数
+   * @param cs                  CallableStatement
+   * @throws SQLException       异常
+   */
   @Override
   public void handleOutputParameters(CallableStatement cs) throws SQLException {
+    //获取参数对象
     final Object parameterObject = parameterHandler.getParameterObject();
+    //构建参数对象的元数据对象
     final MetaObject metaParam = configuration.newMetaObject(parameterObject);
+    //获取参数匹配关系
     final List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
     for (int i = 0; i < parameterMappings.size(); i++) {
       final ParameterMapping parameterMapping = parameterMappings.get(i);
       if (parameterMapping.getMode() == ParameterMode.OUT || parameterMapping.getMode() == ParameterMode.INOUT) {
+        //如果是输出类型的参数
         if (ResultSet.class.equals(parameterMapping.getJavaType())) {
+          //如果<parameter>中指定的javaType为ResultSet
+          //处理引用游标的输出参数
           handleRefCursorOutputParameter((ResultSet) cs.getObject(i + 1), parameterMapping, metaParam);
         } else {
+          //获取参数的类型处理器
           final TypeHandler<?> typeHandler = parameterMapping.getTypeHandler();
+          //利用参数对象的元数据对象进行代理,设置属性值
           metaParam.setValue(parameterMapping.getProperty(), typeHandler.getResult(cs, i + 1));
         }
       }
     }
   }
 
+  /**处理引用游标的输出参数
+   * @param rs                      结果集
+   * @param parameterMapping        参数映射关系
+   * @param metaParam               参数对象的元数据对象
+   * @throws SQLException           异常
+   */
   private void handleRefCursorOutputParameter(ResultSet rs, ParameterMapping parameterMapping, MetaObject metaParam) throws SQLException {
     if (rs == null) {
       return;
     }
     try {
+      //获取resultMapId
       final String resultMapId = parameterMapping.getResultMapId();
+      //根据id获取ResultMap
       final ResultMap resultMap = configuration.getResultMap(resultMapId);
+      //构造结果集包装器
       final ResultSetWrapper rsw = new ResultSetWrapper(rs, configuration);
       if (this.resultHandler == null) {
+        //如果结果处理器为空,创建一个默认的结果处理器
         final DefaultResultHandler resultHandler = new DefaultResultHandler(objectFactory);
+        //处理行数据值
         handleRowValues(rsw, resultMap, resultHandler, new RowBounds(), null);
+        //给参数设置值
         metaParam.setValue(parameterMapping.getProperty(), resultHandler.getResultList());
       } else {
+        //处理行数据值
         handleRowValues(rsw, resultMap, resultHandler, new RowBounds(), null);
+        //因为指定了结果处理器,不会设置参数的值
       }
     } finally {
       // issue #228 (close resultsets)
+      //关闭结果集
       closeResultSet(rs);
     }
   }
 
+  /**处理结果集
+   * @param stmt              Statement
+   * @return                  结果列表
+   * @throws SQLException     异常
+   */
   //
   // HANDLE RESULT SETS
   //
@@ -181,19 +261,29 @@ public class DefaultResultSetHandler implements ResultSetHandler {
   public List<Object> handleResultSets(Statement stmt) throws SQLException {
     ErrorContext.instance().activity("handling results").object(mappedStatement.getId());
 
+    //初始化多结果的结果列表
     final List<Object> multipleResults = new ArrayList<>();
 
     int resultSetCount = 0;
+    //获取第一个结果集的包装器
     ResultSetWrapper rsw = getFirstResultSet(stmt);
-
+    //从mappedStatement中获取多结果的映射关系
     List<ResultMap> resultMaps = mappedStatement.getResultMaps();
     int resultMapCount = resultMaps.size();
+    //验证结果映射的count
     validateResultMapsCount(rsw, resultMapCount);
     while (rsw != null && resultMapCount > resultSetCount) {
+      //有结果集,并且结果集映射的数量大于结果集的count时,循环处理每个结果期
+
+      //获取当前结果集的映射关系
       ResultMap resultMap = resultMaps.get(resultSetCount);
+      //处理当前结果集
       handleResultSet(rsw, resultMap, multipleResults, null);
+      //获取下一个结果集
       rsw = getNextResultSet(stmt);
+      //处理完结果集后清除nestedResultObjects中数据
       cleanUpAfterHandlingResultSet();
+      //索引++
       resultSetCount++;
     }
 
@@ -212,6 +302,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
       }
     }
 
+    //如果只有一个结果集,返回列表中第一个元素, 否则返回整个结果集列表
     return collapseSingleResultList(multipleResults);
   }
 
@@ -233,33 +324,51 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     return new DefaultCursor<>(this, resultMap, rsw, rowBounds);
   }
 
+  /**获取第一个结果集
+   * @param stmt            Statement
+   * @return                结果集包装器
+   * @throws SQLException   异常
+   */
   private ResultSetWrapper getFirstResultSet(Statement stmt) throws SQLException {
+    //从statement中获取一次结果集
     ResultSet rs = stmt.getResultSet();
     while (rs == null) {
       // move forward to get the first resultset in case the driver
       // doesn't return the resultset as the first result (HSQLDB 2.1)
       if (stmt.getMoreResults()) {
+        //如果有结果
+        //再执行一次获取结果集
         rs = stmt.getResultSet();
       } else {
         if (stmt.getUpdateCount() == -1) {
+          //如果已经没有结果,break
           // no more results. Must be no resultset
           break;
         }
       }
     }
+    //结果集不为空时,返回结果集的包装器,否则返回null
     return rs != null ? new ResultSetWrapper(rs, configuration) : null;
   }
 
+  /**获取下一个结果集
+   * @param stmt      Statement
+   * @return          结果集包装器
+   */
   private ResultSetWrapper getNextResultSet(Statement stmt) {
     // Making this method tolerant of bad JDBC drivers
     try {
       if (stmt.getConnection().getMetaData().supportsMultipleResultSets()) {
+        //如果连接支持多结果集
         // Crazy Standard JDBC way of determining if there are more results
         if (!(!stmt.getMoreResults() && stmt.getUpdateCount() == -1)) {
+          //只有有结果,或者更新条数不为-1,就获取一次结果集
           ResultSet rs = stmt.getResultSet();
           if (rs == null) {
+            //为空时递归获取
             return getNextResultSet(stmt);
           } else {
+            //不为空时返回包装器
             return new ResultSetWrapper(rs, configuration);
           }
         }
@@ -270,6 +379,9 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     return null;
   }
 
+  /**关闭结果集
+   * @param rs
+   */
   private void closeResultSet(ResultSet rs) {
     try {
       if (rs != null) {
@@ -284,13 +396,25 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     nestedResultObjects.clear();
   }
 
+  /**验证结果映射的数量
+   * @param rsw               结果集包装器
+   * @param resultMapCount    结果映射的数量
+   */
   private void validateResultMapsCount(ResultSetWrapper rsw, int resultMapCount) {
+    //有结果的时候,结果映射的数量不能小于1
     if (rsw != null && resultMapCount < 1) {
       throw new ExecutorException("A query was run and no Result Maps were found for the Mapped Statement '" + mappedStatement.getId()
           + "'.  It's likely that neither a Result Type nor a Result Map was specified.");
     }
   }
 
+  /**处理结果集
+   * @param rsw                   结果集包装器
+   * @param resultMap             结果映射关系
+   * @param multipleResults       最终的结果列表对象
+   * @param parentMapping         父级结果映射关系
+   * @throws SQLException         异常
+   */
   private void handleResultSet(ResultSetWrapper rsw, ResultMap resultMap, List<Object> multipleResults, ResultMapping parentMapping) throws SQLException {
     try {
       if (parentMapping != null) {

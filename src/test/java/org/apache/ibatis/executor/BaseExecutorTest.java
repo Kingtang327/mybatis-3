@@ -15,19 +15,7 @@
  */
 package org.apache.ibatis.executor;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import javassist.util.proxy.Proxy;
-
-import javax.sql.DataSource;
-
 import org.apache.ibatis.BaseDataTest;
 import org.apache.ibatis.domain.blog.Author;
 import org.apache.ibatis.domain.blog.Blog;
@@ -40,6 +28,13 @@ import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.transaction.jdbc.JdbcTransaction;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import javax.sql.DataSource;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class BaseExecutorTest extends BaseDataTest {
   protected final Configuration config;
@@ -374,7 +369,7 @@ class BaseExecutorTest extends BaseDataTest {
 
   @Test
   void shouldFetchPostWithBlogWithCompositeKey() throws Exception {
-
+    //todo
     Executor executor = createExecutor(new JdbcTransaction(ds, null, false));
     try {
       MappedStatement selectBlog = ExecutorTestHelper.prepareSelectBlogByIdAndAuthor(config);
@@ -396,7 +391,7 @@ class BaseExecutorTest extends BaseDataTest {
 
   @Test
   void shouldFetchComplexBlogs() throws Exception {
-
+    //todo
     Executor executor = createExecutor(new JdbcTransaction(ds, null, false));
     try {
       MappedStatement selectBlog = ExecutorTestHelper.prepareComplexSelectBlogMappedStatement(config);
@@ -418,7 +413,7 @@ class BaseExecutorTest extends BaseDataTest {
 
   @Test
   void shouldMapConstructorResults() throws Exception {
-
+    //todo
     Executor executor = createExecutor(new JdbcTransaction(ds, null, false));
     try {
       MappedStatement selectStatement = ExecutorTestHelper.prepareSelectOneAuthorMappedStatementWithConstructorResults(config);
@@ -437,7 +432,7 @@ class BaseExecutorTest extends BaseDataTest {
 
   @Test
   void shouldClearDeferredLoads() throws Exception {
-
+    //todo
     Executor executor = createExecutor(new JdbcTransaction(ds, null, false));
     try {
       MappedStatement selectBlog = ExecutorTestHelper.prepareComplexSelectBlogMappedStatement(config);

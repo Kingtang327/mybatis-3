@@ -462,7 +462,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
    */
   public void handleRowValues(ResultSetWrapper rsw, ResultMap resultMap, ResultHandler<?> resultHandler, RowBounds rowBounds, ResultMapping parentMapping) throws SQLException {
     if (resultMap.hasNestedResultMaps()) {
-      //如果是嵌套层级的resultMap
+      //如果是嵌套层级的resultMap, 例如association或collection中指定了resultMap
       //检查分页
       ensureNoRowBounds();
       //检查结果处理器
@@ -536,7 +536,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
    */
   private void storeObject(ResultHandler<?> resultHandler, DefaultResultContext<Object> resultContext, Object rowValue, ResultMapping parentMapping, ResultSet rs) throws SQLException {
     if (parentMapping != null) {
-      //处理父级数据
+      //将值设置到父级对象中
       linkToParents(rs, parentMapping, rowValue);
     } else {
       //调用结果处理器处理数据
@@ -646,24 +646,36 @@ public class DefaultResultSetHandler implements ResultSetHandler {
       final MetaObject metaObject = configuration.newMetaObject(rowValue);
       //将值和resultMapId存放在map中
       putAncestor(rowValue, resultMapId);
-      //处理嵌套层级的resultMapping
+      //处理嵌套层级的resultMapping,可能存在循环引用自身对象的情况,所以将rowValue先放入缓存
       applyNestedResultMappings(rsw, resultMap, metaObject, columnPrefix, combinedKey, false);
-      //从map中移除元素
+      //从缓存map中移除元素
       ancestorObjects.remove(resultMapId);
     } else {
+      //创建一个懒加载对象,用于加载属性
       final ResultLoaderMap lazyLoader = new ResultLoaderMap();
+      //创建结果对象
+      //将拦截载属性加入到懒加载对象中
+      //为包含嵌套查询的结果对象创建代理对象
       rowValue = createResultObject(rsw, resultMap, lazyLoader, columnPrefix);
       if (rowValue != null && !hasTypeHandlerForResultObject(rsw, resultMap.getType())) {
+        //为数据创建元数据对象
         final MetaObject metaObject = configuration.newMetaObject(rowValue);
         boolean foundValues = this.useConstructorMappings;
         if (shouldApplyAutomaticMappings(resultMap, true)) {
+          //应用自动映射
           foundValues = applyAutomaticMappings(rsw, resultMap, metaObject, columnPrefix) || foundValues;
         }
+        //引用属性映射
         foundValues = applyPropertyMappings(rsw, resultMap, metaObject, lazyLoader, columnPrefix) || foundValues;
+        //将值和resultMapId存放在map中
         putAncestor(rowValue, resultMapId);
+        //处理嵌套层级的resultMapping,可能存在循环引用自身对象的情况,所以将rowValue先放入缓存
         foundValues = applyNestedResultMappings(rsw, resultMap, metaObject, columnPrefix, combinedKey, true) || foundValues;
+        //从缓存map中移除元素
         ancestorObjects.remove(resultMapId);
+        //如果懒加载对象中有拦截属性,设置有值标志为找到值
         foundValues = lazyLoader.size() > 0 || foundValues;
+        //如果找到值或者配置空指定了即使没数据返回空对象,返回值对象rowValue, 否则返回null
         rowValue = foundValues || configuration.isReturnInstanceForEmptyRow() ? rowValue : null;
       }
       if (combinedKey != CacheKey.NULL_CACHE_KEY) {
@@ -874,11 +886,11 @@ public class DefaultResultSetHandler implements ResultSetHandler {
 
   // MULTIPLE RESULT SETS
 
-  /**
-   * @param rs
-   * @param parentMapping
-   * @param rowValue
-   * @throws SQLException
+  /**将值设置到父级对象中
+   * @param rs                结果集
+   * @param parentMapping     父级属性映射关系
+   * @param rowValue          值
+   * @throws SQLException     异常
    */
   private void linkToParents(ResultSet rs, ResultMapping parentMapping, Object rowValue) throws SQLException {
     //计算缓存key
@@ -887,6 +899,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     if (parents != null) {
       for (PendingRelation parent : parents) {
         if (parent != null && rowValue != null) {
+          //将值设置到resultMap的collection或者association中
           linkObjects(parent.metaObject, parent.propertyMapping, rowValue);
         }
       }
@@ -1432,7 +1445,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
   // HANDLE NESTED RESULT MAPS
   //
 
-  /**处理嵌套层级的resultMapping
+  /**处理嵌套层级的resultMap
    * @param rsw                 结果集包装器
    * @param resultMap           结果映射关系对象
    * @param resultHandler       结果处理器
@@ -1451,7 +1464,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     while (shouldProcessMoreRows(resultContext, rowBounds) && !resultSet.isClosed() && resultSet.next()) {
       //有数据可以处理时
 
-      //解析鉴别器指定的resultMap
+      //解析鉴别器指定的resultMap,未指定则返回当前的resultMap
       final ResultMap discriminatedResultMap = resolveDiscriminatedResultMap(resultSet, resultMap, null);
       //创建行缓存key
       final CacheKey rowKey = createRowKey(discriminatedResultMap, rsw, null);
@@ -1517,7 +1530,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
             Object ancestorObject = ancestorObjects.get(nestedResultMapId);
             if (ancestorObject != null) {
               if (newObject) {
-                //根据属性的类型是否是集合类型设置属性值
+                //将值设置到resultMap的collection或者association中
                 linkObjects(metaObject, resultMapping, ancestorObject); // issue #385
               }
               continue;
@@ -1537,7 +1550,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
             //获取值
             rowValue = getRowValue(rsw, nestedResultMap, combinedKey, columnPrefix, rowValue);
             if (rowValue != null && !knownValue) {
-              //根据属性的类型是否是集合类型设置属性值
+              //将值设置到resultMap的collection或者association中
               linkObjects(metaObject, resultMapping, rowValue);
               foundValues = true;
             }
@@ -1781,7 +1794,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     }
   }
 
-  /**根据属性的类型是否是集合类型设置属性值
+  /**将值设置到resultMap的collection或者association中
    * @param metaObject          元数据对象
    * @param resultMapping       当前属性的映射关系
    * @param rowValue            当前值

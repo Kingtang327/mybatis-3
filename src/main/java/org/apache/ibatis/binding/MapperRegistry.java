@@ -15,16 +15,12 @@
  */
 package org.apache.ibatis.binding;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.ibatis.builder.annotation.MapperAnnotationBuilder;
 import org.apache.ibatis.io.ResolverUtil;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSession;
+
+import java.util.*;
 
 /**
  * @author Clinton Begin
@@ -33,41 +29,71 @@ import org.apache.ibatis.session.SqlSession;
  */
 public class MapperRegistry {
 
+  /**
+   * 核心配置对象
+   */
   private final Configuration config;
+  /**
+   * Mapper类和Mapper代理工厂的缓存
+   */
   private final Map<Class<?>, MapperProxyFactory<?>> knownMappers = new HashMap<>();
 
+  /**构造函数
+   * @param config          核心配置对象
+   */
   public MapperRegistry(Configuration config) {
     this.config = config;
   }
 
+  /**获取Mapper类的代理类
+   * @param type            Mapper类型
+   * @param sqlSession      SqlSession
+   * @param <T>             泛型
+   * @return                Mapper类的代理类
+   */
   @SuppressWarnings("unchecked")
   public <T> T getMapper(Class<T> type, SqlSession sqlSession) {
+    //根据mapper类获取代理工厂类
     final MapperProxyFactory<T> mapperProxyFactory = (MapperProxyFactory<T>) knownMappers.get(type);
     if (mapperProxyFactory == null) {
       throw new BindingException("Type " + type + " is not known to the MapperRegistry.");
     }
     try {
+      //使用代理工厂生成一个代理
       return mapperProxyFactory.newInstance(sqlSession);
     } catch (Exception e) {
       throw new BindingException("Error getting mapper instance. Cause: " + e, e);
     }
   }
 
+  /**判断是否有Mapper类的代理工厂类
+   * @param type            Mapper类型
+   * @param <T>             泛型
+   * @return                否有Mapper类的代理工厂类
+   */
   public <T> boolean hasMapper(Class<T> type) {
     return knownMappers.containsKey(type);
   }
 
+  /**将Mapper类注册到缓存中
+   * @param type            Mapper类型
+   * @param <T>             泛型
+   */
   public <T> void addMapper(Class<T> type) {
     if (type.isInterface()) {
+      //只注册接口类
       if (hasMapper(type)) {
+        //不允许重复注册
         throw new BindingException("Type " + type + " is already known to the MapperRegistry.");
       }
       boolean loadCompleted = false;
       try {
+        //加入缓存
         knownMappers.put(type, new MapperProxyFactory<>(type));
         // It's important that the type is added before the parser is run
         // otherwise the binding may automatically be attempted by the
         // mapper parser. If the type is already known, it won't try.
+        //解析Mapper.class
         MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
         parser.parse();
         loadCompleted = true;
